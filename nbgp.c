@@ -11,53 +11,7 @@
 
 
 
-char *friendly_ip(struct addrinfo *p) {
-  void *addr;
-  char *str = malloc(INET6_ADDRSTRLEN); // Max address length so far
-  if(str == NULL) {
-    perror("malloc failed");
-    return NULL;
-  }
 
-  //
-  switch(p->ai_family) {
-    case AF_INET:
-      addr = &((struct sockaddr_in *)p->ai_addr)->sin_addr;
-      break;
-    case AF_INET6:
-      addr = &((struct sockaddr_in6 *)p->ai_addr)->sin6_addr;
-      break;
-  }
-
-  inet_ntop(p->ai_family, addr, str, INET6_ADDRSTRLEN);
-
-  return str;
-}
-
-void *start_server_cycle() {
-
-  bgp_peer *next;
-
-  next = TAILQ_FIRST(&bgp_peer_q);
-  if(next == NULL) {
-    printf("No peers configured\n");
-    return;
-  }
-  
-  printf("Server cycle thread\n");
-
-  for(;;) {
-    
-
-    printf("Next address is %s\n", friendly_ip(next->address));
-    next = TAILQ_NEXT(next, entries);
-    if(next == NULL) {
-      next = TAILQ_FIRST(&bgp_peer_q);
-    }
-
-    usleep(3000000);
-  }
-}
 
 int main(int argc, char *argv[]) {
 
@@ -112,4 +66,71 @@ int main(int argc, char *argv[]) {
 
   return 0;
 
+}
+
+
+char *friendly_ip(struct addrinfo *p) {
+  void *addr;
+  char *str = malloc(INET6_ADDRSTRLEN); // Max address length so far
+  if(str == NULL) {
+    perror("malloc failed");
+    return NULL;
+  }
+
+  //
+  switch(p->ai_family) {
+    case AF_INET:
+      addr = &((struct sockaddr_in *)p->ai_addr)->sin_addr;
+      break;
+    case AF_INET6:
+      addr = &((struct sockaddr_in6 *)p->ai_addr)->sin6_addr;
+      break;
+  }
+
+  inet_ntop(p->ai_family, addr, str, INET6_ADDRSTRLEN);
+
+  return str;
+}
+
+void *start_server_cycle() {
+
+  bgp_peer *next;
+
+  next = TAILQ_FIRST(&bgp_peer_q);
+  if(next == NULL) {
+    printf("No peers configured\n");
+    return;
+  }
+  
+  printf("Server cycle thread\n");
+
+  for(;;) {
+    
+    printf("Next address is %s\n", friendly_ip(next->address));
+
+    // Finite State Machine
+    check_state(next);
+
+
+    next = TAILQ_NEXT(next, entries);
+    if(next == NULL) {
+      next = TAILQ_FIRST(&bgp_peer_q);
+    }
+    usleep(3000000);
+  }
+}
+
+// Finite State Machine
+void check_state(bgp_peer *peer) {
+  switch(peer->state) {
+    // Set initial state
+    case STATE_NULL:
+      peer->state = STATE_IDLE;
+      printf("Peer %s changed state to IDLE\n", friendly_ip(peer->address));
+      break;
+    case STATE_IDLE:
+
+      break;
+  }
+  return;
 }
